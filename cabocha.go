@@ -5,11 +5,13 @@ package cabocha
 // #include <cabocha.h>
 import "C"
 import (
+	"runtime"
 	"unsafe"
 )
 
 type Cabocha struct {
-	ptr *C.struct_cabocha_t
+	ptr         *C.struct_cabocha_t
+	isDestroyed bool
 }
 type Chunk struct {
 	Link           int
@@ -37,9 +39,19 @@ type Tree struct {
 
 func NewCabocha(arg string) Cabocha {
 	ptr := C.cabocha_new2(C.CString(arg))
-	return Cabocha{
-		ptr: ptr,
+	ret := Cabocha{
+		ptr:         ptr,
+		isDestroyed: false,
 	}
+	runtime.SetFinalizer(&ret, finalizer)
+	return &ret
+}
+
+func finalizer(c *Chabocha) {
+	if c.isDestroyed == false {
+		c.Destroy()
+	}
+	return
 }
 
 func (c *Cabocha) Parse(str string) Tree {
@@ -85,6 +97,7 @@ func (c *Cabocha) Parse(str string) Tree {
 }
 
 func (c *Cabocha) Destroy() {
+	c.isDestroyed = true
 	C.cabocha_destroy(c.ptr)
 }
 
